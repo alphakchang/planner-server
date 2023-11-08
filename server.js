@@ -38,9 +38,9 @@ app.get('/', (req, res) => {
 	})
 });
 
-////////////////////////////////////////////
-// Endpoints for "Work Allocation Planner"
-////////////////////////////////////////////
+//////////////////////////////////////////////
+// Endpoints for "Work Allocation Planner"  //
+//////////////////////////////////////////////
 
 // Get the fullname of the user, based on the provided username
 app.get('/name/:username', (req, res) => { getName(req, res, db) });
