@@ -1,6 +1,10 @@
+// server imports
 import express from 'express';
 import cors from 'cors';
 import knex from 'knex';
+import dotenv from 'dotenv';
+
+// work allocation planner imports
 import getName from './planner-controllers/name.js';
 import getLocale from './planner-controllers/locale.js';
 import getTeamName from './planner-controllers/teamName.js';
@@ -15,8 +19,39 @@ import getTask from './planner-controllers/task.js';
 import getTeamTaskCount from './planner-controllers/teamTaskCount.js';
 import getTeamAllTasks from './planner-controllers/teamAllTasks.js';
 
+// memoQ plugin imports
+import handleGptTranslate from './memoQ-controllers/gptTranslate.js';
+
+/**
+ * This is the main entry point for the backend server.
+ * 
+ * The server is built using Express.js, and uses Knex.js to connect to the PostgreSQL database.
+ * 
+ * The server contains endpoints for the following:
+ * 1. Work Allocation Planner
+ * 2. Prompt Tool/Content Editor/Humour Responder
+ * 3. MemoQ Plugin
+ * 
+ * The endpoints for each of the above are defined in their respective controllers.
+ * 
+ * The server is hosted on naga
+ */
+
+// Load the environment variables from the .env file
+dotenv.config();
+const openaiApiKey = process.env.OPENAI_API_KEY;
+const port = process.env.PORT || 3001;
+
 const app = express();
 
+app.use(express.json());
+app.use(cors());
+
+//////////////////////////////////////////////
+// Endpoints for "Work Allocation Planner"  //
+//////////////////////////////////////////////
+
+// The database for the prototype
 const db = knex({
   client: 'pg',
   connection: {
@@ -27,20 +62,6 @@ const db = knex({
     database : 'planner'
   }
 });
-
-app.use(express.json());
-app.use(cors());
-
-app.get('/', (req, res) => {
-	db.select('*').from('users')
-	.then(response => {
-		res.json(response[0]);
-	})
-});
-
-//////////////////////////////////////////////
-// Endpoints for "Work Allocation Planner"  //
-//////////////////////////////////////////////
 
 // Get the fullname of the user, based on the provided username
 app.get('/name/:username', (req, res) => { getName(req, res, db) });
@@ -83,6 +104,30 @@ app.get('/teamTaskCount/:team', (req, res) => { getTeamTaskCount(req, res, db) }
 app.get('/teamAllTasks/:team', (req, res) => { getTeamAllTasks(req, res, db) });
 
 
-app.listen(3001, ()=> {
-    console.log('app is running on port 3001!');
+//////////////////////////////////////////////////////////////////
+// Endpoints for the Prompt Tool/Content Editor/Humour Responder //
+//////////////////////////////////////////////////////////////////
+
+app.get('/apikey', (req, res) => {
+	res.json({ key: openaiApiKey });
+});
+
+
+////////////////////////////////////
+// Endpoints for the MemoQ Plugin //
+////////////////////////////////////
+
+app.get('/test', (req, res) => {
+	res.json('hello Jorge!')
+});
+
+app.post('/gptTranslate', (req, res) => { handleGptTranslate(req, res) });
+
+// Start the server
+app.listen(port, ()=> {
+	console.log(`Server running on port ${port}`);
+});
+
+app.get('/', (req, res) => {
+	res.send('Server running as usual, nothing to see here.');
 });
