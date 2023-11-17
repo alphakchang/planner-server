@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import knex from 'knex';
 import dotenv from 'dotenv';
+import path from 'path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // work allocation planner imports
 import getName from './planner-controllers/name.js';
@@ -18,6 +21,7 @@ import getAllTasks from './planner-controllers/allTasks.js';
 import getTask from './planner-controllers/task.js';
 import getTeamTaskCount from './planner-controllers/teamTaskCount.js';
 import getTeamAllTasks from './planner-controllers/teamAllTasks.js';
+import handleAddTask from './planner-controllers/addTask.js';
 
 // memoQ plugin imports
 import handleGptTranslate from './memoQ-controllers/gptTranslate.js';
@@ -42,6 +46,12 @@ dotenv.config();
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const port = process.env.PORT || 3001;
 
+// Get the __filename equivalent in ES Module
+const __filename = fileURLToPath(import.meta.url);
+
+// Get the __dirname equivalent in ES Module
+const __dirname = dirname(__filename);
+
 const app = express();
 
 app.use(express.json());
@@ -55,11 +65,11 @@ app.use(cors());
 const db = knex({
   client: 'pg',
   connection: {
-    host : '127.0.0.1',
-    port : 5432,
-    user : 'ken',
-    password : 'test',
-    database : 'planner'
+    host: '127.0.0.1',
+    port: 5432,
+    user: 'ken',
+    password: 'test',
+    database: 'planner'
   }
 });
 
@@ -103,31 +113,57 @@ app.get('/teamTaskCount/:team', (req, res) => { getTeamTaskCount(req, res, db) }
 // Get the list of tasks assigned to the team(centre) that are not in 'Done' status.
 app.get('/teamAllTasks/:team', (req, res) => { getTeamAllTasks(req, res, db) });
 
+// Prototype feature - Add a new task to the database
+app.post('/addTask', (req, res) => {handleAddTask(req, res, db)});
 
-//////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Endpoints for the Prompt Tool/Content Editor/Humour Responder //
-//////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 
 app.get('/apikey', (req, res) => {
-	res.json({ key: openaiApiKey });
+  res.json({ key: openaiApiKey });
 });
 
+
+////////////////////////////////////
+// Serve static files from Alphai //
+////////////////////////////////////
+
+// Alphai
+const buildPathAlphai = path.join(__dirname, '../SupportAI/build');
+app.use('/alphai', express.static(buildPathAlphai));
+
+app.get('/alphai/*', (req, res) => {
+	res.sendFile(path.join(buildPathAlphai, 'index.html'));
+});
+
+// Alphai - memoQ troubleshooter
+const buildPathAlphaiMMQ = path.join(__dirname, '../SupportAI_mmQ/build');
+app.use('/mmq-troubles', express.static(buildPathAlphaiMMQ));
+
+app.get('/mmq-troubles/*', (req, res) => {
+	res.sendFile(path.join(buildPathAlphaiMMQ, 'index.html'));
+});
 
 ////////////////////////////////////
 // Endpoints for the MemoQ Plugin //
 ////////////////////////////////////
 
 app.get('/test', (req, res) => {
-	res.json('hello Jorge!')
+  res.json('hello Jorge!')
 });
 
 app.post('/gptTranslate', (req, res) => { handleGptTranslate(req, res) });
 
-// Start the server
-app.listen(port, ()=> {
-	console.log(`Server running on port ${port}`);
+
+//////////////////////
+// Start the server //
+//////////////////////
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on Naga, port ${port}`);
 });
 
 app.get('/', (req, res) => {
-	res.send('Server running as usual, nothing to see here.');
+  res.send('Server running as usual, nothing to see here.');
 });
